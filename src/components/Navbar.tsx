@@ -7,7 +7,8 @@ import {
   Cpu, 
   Download, 
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from "lucide-react";
 import { AppViewMode } from "../types";
 
@@ -68,6 +69,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Film className="w-3.5 h-3.5" />
           <span>剪辑工作台</span>
+        </button>
+
+        <button
+          id="nav-tab-review-portal"
+          onClick={() => onViewChange("review_portal")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
+            currentView === "review_portal"
+              ? "bg-amber-500 text-slate-950 font-semibold shadow-sm"
+              : "text-amber-400/90 hover:text-amber-300 hover:bg-amber-950/30"
+          }`}
+          title="外审分享页面：免登录提供给客户/导演进行逐帧画笔批注与意见回传"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>外审批注页 (客户审片)</span>
         </button>
 
         <button

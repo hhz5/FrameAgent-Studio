@@ -325,3 +325,142 @@ export const EVALUATION_METRICS: EvalMetric[] = [
     status: "optimal"
   }
 ];
+
+export const MOCK_REVIEW_COMMENTS: import("../types").ReviewComment[] = [
+  {
+    id: "rev_c1",
+    timecodeSec: 15.0,
+    author: {
+      name: "王客户 (甲方审片人)",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60",
+      role: "client"
+    },
+    text: "第15秒处讲述有点拖沓，有明显的'呃...其实'口水词气口，建议把气口切除掉，让对话更紧凑。",
+    markup: {
+      type: "box",
+      color: "#f59e0b",
+      coords: { x: 35, y: 40, width: 30, height: 25 }
+    },
+    status: "todo",
+    category: "cut",
+    autoFixable: true,
+    agentActionDescription: "自动定位 00:14.5~00:16.8 无声与口水词气口，执行无缝跳剪 (Jump Cut) 修复",
+    createdAt: "10分钟前"
+  },
+  {
+    id: "rev_c2",
+    timecodeSec: 24.2,
+    author: {
+      name: "李总监 (制作人/导演)",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=60",
+      role: "director"
+    },
+    text: "在提到'行业演化三阶段'时，单机位人物中景略显单调，请在这个画面右侧垫入剪辑软件演化对比的 B-Roll 素材覆盖。",
+    markup: {
+      type: "box",
+      color: "#a855f7",
+      coords: { x: 55, y: 20, width: 40, height: 50 }
+    },
+    status: "todo",
+    category: "broll",
+    autoFixable: true,
+    agentActionDescription: "从候选池检索 'timeline_evolution_4k' 并自动在 B-Roll 轨对齐 00:24.0~00:32.0",
+    createdAt: "25分钟前"
+  },
+  {
+    id: "rev_c3",
+    timecodeSec: 36.5,
+    author: {
+      name: "周经理 (品牌合规负责人)",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&auto=format&fit=crop&q=60",
+      role: "brand_manager"
+    },
+    text: "品牌合规提醒：此段字幕颜色与品牌 VI 色板不符，且底部字幕偏低，进入了抖音竖屏底栏点赞评论的遮挡安全区。",
+    markup: {
+      type: "pin",
+      color: "#ef4444",
+      coords: { x: 50, y: 88 }
+    },
+    status: "in_progress",
+    category: "brand_vi",
+    autoFixable: true,
+    agentActionDescription: "依据品牌 VI 自动替换高亮色为 #E2B93B，并将字幕垂直上移 48px 避开 UI 安全区",
+    createdAt: "1小时前"
+  },
+  {
+    id: "rev_c4",
+    timecodeSec: 48.0,
+    author: {
+      name: "张剪辑师 (后期团队)",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=60",
+      role: "editor"
+    },
+    text: "人声高潮总结段落，背景音乐已经过大，需要追加动态压限 (Audio Ducking) 将人声音量提亮 +3dB。",
+    markup: {
+      type: "arrow",
+      color: "#10b981",
+      coords: { x: 45, y: 70 }
+    },
+    status: "resolved",
+    category: "audio",
+    autoFixable: true,
+    agentActionDescription: "执行智能侧链压限 (Sidechain Ducking) -14dB，保障人声清晰通透",
+    createdAt: "2小时前"
+  }
+];
+
+export const INITIAL_VERSION_STACK: import("../types").VersionStackItem[] = [
+  {
+    id: "ver_1",
+    version: "v1.0",
+    label: "原始多机位粗录素材 (Raw Assembly)",
+    createdAt: "2026-09-15 14:30",
+    author: "自动化现场转码",
+    status: "draft",
+    changesSummary: "直接导入单机位 4K 60秒原始素材，未进行任何剪辑、清洗与包装",
+    tracksSnapshot: []
+  },
+  {
+    id: "ver_2",
+    version: "v1.1",
+    label: "Agent 智能清洗初剪版 (Clean Cut)",
+    createdAt: "2026-09-15 15:10",
+    author: "FrameAgent AI",
+    status: "draft",
+    changesSummary: "自动清洗 3 处停顿口水词，添加基础花字字幕，总时长压缩至 52秒",
+    tracksSnapshot: []
+  },
+  {
+    id: "ver_3",
+    version: "v2.0",
+    label: "客户与导演一审批注版 (Review v2)",
+    createdAt: "2026-09-15 16:45",
+    author: "王客户 & 李总监",
+    status: "reviewing",
+    changesSummary: "包含 4 条精准到帧的画面批注意见，待 Agent 自动处理与人工复核",
+    tracksSnapshot: []
+  },
+  {
+    id: "ver_4",
+    version: "v2.1",
+    label: "品牌合规精修交付版 (Master Final)",
+    createdAt: "2026-09-15 18:20",
+    author: "FrameAgent & 周合规",
+    status: "approved",
+    changesSummary: "完成 VI 水印压制、抖音/视频号安全区自适应校准、人声动态压限",
+    tracksSnapshot: []
+  }
+];
+
+export const INITIAL_BRAND_KIT: import("../types").BrandKitConfig = {
+  brandName: "StoryFyco Studio",
+  watermarkEnabled: true,
+  watermarkText: "FRAMEAGENT · 内部审片禁止外传 · CC-BY-NC",
+  watermarkPosition: "top-right",
+  watermarkOpacity: 45,
+  brandColor: "#6366F1",
+  fontFamily: "Inter / 思源黑体",
+  forbiddenWords: ["最强", "唯一", "遥遥领先", "绝对", "保本"],
+  safeZoneRule: "douyin_tiktok"
+};
+

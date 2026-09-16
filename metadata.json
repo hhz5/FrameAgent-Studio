@@ -1,6 +1,6 @@
 {
   "name": "FrameAgent Studio - 音视频 AI 剪辑平台",
-  "description": "面向专业与商业创作者的 Agent 原生音视频剪辑平台：可控、可编辑、可回滚的时间线智能工作流与评测体系",
+  "description": "融合 Frame.io 与分秒帧协同审阅的 Agent 原生音视频剪辑平台：精准画笔批注、审阅转工程自动修复、多版本堆叠、品牌 VI 合规与外审分享",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

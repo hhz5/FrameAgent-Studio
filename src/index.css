@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Hide scrollbar while maintaining scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Custom dark scrollbar for timeline and panels */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

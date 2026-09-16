@@ -14,14 +14,25 @@ import { HumanApprovalModal } from "./components/studio/HumanApprovalBar";
 import { PrdViewer } from "./components/prd/PrdViewer";
 import { WireframeViewer } from "./components/wireframe/WireframeViewer";
 import { EvalDashboard } from "./components/eval/EvalDashboard";
-import { INITIAL_TRACKS } from "./data/mockData";
+import { ReviewPortal } from "./components/review/ReviewPortal";
+import { 
+  INITIAL_TRACKS,
+  MOCK_REVIEW_COMMENTS,
+  INITIAL_VERSION_STACK,
+  INITIAL_BRAND_KIT
+} from "./data/mockData";
 import { 
   AppViewMode, 
   TimelineTrack, 
   TimelineClip, 
   AgentThought, 
-  AgentAction 
+  AgentAction,
+  UserPersona,
+  ReviewComment,
+  VersionStackItem,
+  BrandKitConfig
 } from "./types";
+import { ShareReviewModal } from "./components/studio/ShareReviewModal";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppViewMode>("studio");
@@ -38,6 +49,15 @@ export default function App() {
   const [selectedClipId, setSelectedClipId] = useState<string | null>("clip_v2");
   const [studioLayout, setStudioLayout] = useState<"three-column" | "stacked" | "focus-monitor">("three-column");
 
+  // Collaboration, Review & Persona State (Frame.io / 分秒帧 深度融合)
+  const [activePersona, setActivePersona] = useState<UserPersona>("studio");
+  const [reviewComments, setReviewComments] = useState<ReviewComment[]>(MOCK_REVIEW_COMMENTS);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>("rev_c1");
+  const [versions, setVersions] = useState<VersionStackItem[]>(INITIAL_VERSION_STACK);
+  const [currentVersionId, setCurrentVersionId] = useState<string>("ver_4");
+  const [brandKit, setBrandKit] = useState<BrandKitConfig>(INITIAL_BRAND_KIT);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+
   // Agent State
   const [currentThought, setCurrentThought] = useState<AgentThought | null>(null);
   const [isLoadingAgent, setIsLoadingAgent] = useState<boolean>(false);
@@ -47,6 +67,7 @@ export default function App() {
   // Modals
   const [diffAction, setDiffAction] = useState<AgentAction | null>(null);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
+
 
   // Timer loop for video playback
   const animationFrameRef = useRef<number | null>(null);
@@ -326,6 +347,146 @@ export default function App() {
     );
   };
 
+  // Add a new review comment (Canvas Markup or Scrubber Pin)
+  const handleAddReviewComment = (data: {
+    text: string;
+    category: ReviewComment["category"];
+    markup?: ReviewComment["markup"];
+    priority?: "normal" | "urgent";
+    authorName?: string;
+    authorRole?: ReviewComment["author"]["role"];
+  }) => {
+    const authorName = data.authorName || (activePersona === "creator" ? "专业创作者 (我)" : activePersona === "brand" ? "周总监 (品牌合规)" : "李总监 (制作人)");
+    const authorRole = data.authorRole || (activePersona === "brand" ? "brand_manager" : activePersona === "creator" ? "editor" : "director");
+
+    const newComment: ReviewComment = {
+      id: `rev_${Date.now()}`,
+      timecodeSec: currentTimeSec,
+      author: {
+        name: authorName,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60",
+        role: authorRole
+      },
+      text: data.text,
+      markup: data.markup,
+      status: "todo",
+      category: data.category,
+      autoFixable: true,
+      agentActionDescription: `Agent 智能解析：已根据批注在 ${currentTimeSec.toFixed(1)}s 规划工程轨道修改`,
+      createdAt: "刚刚"
+    };
+
+    setReviewComments((prev) => [newComment, ...prev]);
+    setActiveCommentId(newComment.id);
+  };
+
+  // Status toggle
+  const handleStatusChangeComment = (id: string, newStatus: ReviewComment["status"]) => {
+    setReviewComments((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
+    );
+  };
+
+  // Review-to-Action: Frame.io / 分秒帧核心业务升级 —— 审阅批注一键自动生成工程修改并执行
+  const handleApplyCommentAgentAction = (comment: ReviewComment) => {
+    const actionId = `act_${Date.now()}`;
+    let newAction: AgentAction;
+
+    if (comment.category === "cut") {
+      newAction = {
+        id: actionId,
+        tool: "remove_filler",
+        targetTrack: "video",
+        title: `审阅反馈跳剪执行: ${comment.text.slice(0, 16)}...`,
+        description: `定位时间码 ${comment.timecodeSec.toFixed(1)}s，切除冗余气口停顿`,
+        timeRange: [comment.timecodeSec, comment.timecodeSec + 1.8],
+        parameters: { cutThresholdSec: 0.3 },
+        reversible: true,
+        status: "accepted",
+        appliedAt: "刚刚",
+        riskLevel: "low",
+      };
+
+      handleSplitClip("clip_v2", comment.timecodeSec);
+    } else if (comment.category === "broll") {
+      newAction = {
+        id: actionId,
+        tool: "insert_broll",
+        targetTrack: "broll",
+        title: `审阅反馈追加 B-Roll 覆盖: ${comment.text.slice(0, 16)}...`,
+        description: `在 ${comment.timecodeSec.toFixed(1)}s 插入科技演化动效覆盖单调镜头`,
+        timeRange: [comment.timecodeSec, comment.timecodeSec + 6.0],
+        parameters: { style: "cyber_dark", motionPace: "fast" },
+        reversible: true,
+        status: "accepted",
+        appliedAt: "刚刚",
+        riskLevel: "low",
+      };
+
+      setTracks((prev) =>
+        prev.map((tr) => {
+          if (tr.type === "broll") {
+            const newClip: TimelineClip = {
+              id: `broll_rev_${Date.now()}`,
+              trackId: tr.id,
+              name: "B-Roll: 软件演化演示 4K",
+              startSec: comment.timecodeSec,
+              durationSec: 6.0,
+              sourceStartSec: 0,
+              type: "broll",
+              isAgentGenerated: true,
+              agentActionId: actionId,
+              color: "bg-purple-900/60 border-purple-500 text-purple-200"
+            };
+            return { ...tr, clips: [...tr.clips, newClip] };
+          }
+          return tr;
+        })
+      );
+    } else {
+      newAction = {
+        id: actionId,
+        tool: "duck_audio",
+        targetTrack: "audio",
+        title: `审阅反馈合规/音频调整: ${comment.text.slice(0, 16)}...`,
+        description: "执行动态侧链压限与安全区对齐",
+        timeRange: [comment.timecodeSec, comment.timecodeSec + 4.0],
+        parameters: { duckingDb: -14 },
+        reversible: true,
+        status: "accepted",
+        appliedAt: "刚刚",
+        riskLevel: "low",
+      };
+    }
+
+    setReviewComments((prev) =>
+      prev.map((c) => (c.id === comment.id ? { ...c, status: "resolved" } : c))
+    );
+
+    setCurrentThought({
+      summary: `已自动根据【${comment.author.name}】的审阅批注执行工程修改`,
+      riskLevel: "low",
+      understand: `批注意图：“${comment.text}”。已映射到精确时间码 ${comment.timecodeSec.toFixed(1)}s 与对应轨道。`,
+      plan: [
+        `1. 定位时间码 ${comment.timecodeSec.toFixed(1)}s 对应片段与轨道`,
+        `2. 自动执行轨道级切刀/插入/压限操作并平滑曲线`,
+        `3. 校验合规性与播放安全区`
+      ],
+      actions: [newAction],
+      verification: {
+        passed: true,
+        checks: [
+          { item: "时间码对齐准确性", status: "pass", detail: `偏移量 < 0.02s` },
+          { item: "安全区与音频削波", status: "pass", detail: "无削波，处于 -14 LUFS 标准" }
+        ]
+      },
+      candidateSuggestions: [
+        "生成更新后的外审分享链接通知甲方",
+        "切换到 A/B 对比视窗核验修改前后差异"
+      ]
+    });
+  };
+
   // Calculate dynamic intervention rate based on user interactions
   const totalActionsCount = currentThought?.actions.length || 3;
   const calculatedInterventionRate = Math.max(
@@ -351,13 +512,23 @@ export default function App() {
           <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
             {studioLayout === "three-column" ? (
               <>
-                {/* Column 1: Text-based Transcript & Asset Bin & Inspector Panel (Left) */}
-                <div className="w-full md:w-[320px] lg:w-[350px] xl:w-[380px] shrink-0 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col min-h-0 bg-slate-950">
+                {/* Column 1: Text-based Transcript & Asset Bin & Inspector Panel (Left - Widened for optimal readability) */}
+                <div className="w-full md:w-[360px] lg:w-[400px] xl:w-[430px] shrink-0 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col min-h-0 bg-slate-950">
                   <TranscriptAssetPanel
                     currentTimeSec={currentTimeSec}
                     onSeek={(timeSec) => setCurrentTimeSec(timeSec)}
                     selectedClip={tracks.flatMap((t) => t.clips).find((c) => c.id === selectedClipId) || null}
                     onRollbackAction={handleRollbackAction}
+                    reviewComments={reviewComments}
+                    activeCommentId={activeCommentId}
+                    onSelectComment={setActiveCommentId}
+                    onStatusChangeComment={handleStatusChangeComment}
+                    onApplyCommentAgentAction={handleApplyCommentAgentAction}
+                    brandKit={brandKit}
+                    onUpdateBrandKit={setBrandKit}
+                    activePersona={activePersona}
+                    onChangePersona={setActivePersona}
+                    onOpenShareModal={() => setIsShareModalOpen(true)}
                   />
                 </div>
 
@@ -380,6 +551,15 @@ export default function App() {
                     onToggleSafeZone={() => setShowSafeZone(!showSafeZone)}
                     layoutMode={studioLayout}
                     onLayoutModeChange={setStudioLayout}
+                    reviewComments={reviewComments}
+                    activeCommentId={activeCommentId}
+                    onSelectComment={setActiveCommentId}
+                    onAddComment={handleAddReviewComment}
+                    versionStack={versions}
+                    currentVersionId={currentVersionId}
+                    onSelectVersion={setCurrentVersionId}
+                    brandKit={brandKit}
+                    onOpenShareReview={() => setIsShareModalOpen(true)}
                   />
                 </section>
               </>
@@ -405,6 +585,15 @@ export default function App() {
                     onToggleSafeZone={() => setShowSafeZone(!showSafeZone)}
                     layoutMode={studioLayout}
                     onLayoutModeChange={setStudioLayout}
+                    reviewComments={reviewComments}
+                    activeCommentId={activeCommentId}
+                    onSelectComment={setActiveCommentId}
+                    onAddComment={handleAddReviewComment}
+                    versionStack={versions}
+                    currentVersionId={currentVersionId}
+                    onSelectVersion={setCurrentVersionId}
+                    brandKit={brandKit}
+                    onOpenShareReview={() => setIsShareModalOpen(true)}
                   />
                 </div>
 
@@ -415,6 +604,16 @@ export default function App() {
                     onSeek={(timeSec) => setCurrentTimeSec(timeSec)}
                     selectedClip={tracks.flatMap((t) => t.clips).find((c) => c.id === selectedClipId) || null}
                     onRollbackAction={handleRollbackAction}
+                    reviewComments={reviewComments}
+                    activeCommentId={activeCommentId}
+                    onSelectComment={setActiveCommentId}
+                    onStatusChangeComment={handleStatusChangeComment}
+                    onApplyCommentAgentAction={handleApplyCommentAgentAction}
+                    brandKit={brandKit}
+                    onUpdateBrandKit={setBrandKit}
+                    activePersona={activePersona}
+                    onChangePersona={setActivePersona}
+                    onOpenShareModal={() => setIsShareModalOpen(true)}
                   />
                 </div>
               </section>
@@ -439,6 +638,15 @@ export default function App() {
                     onToggleSafeZone={() => setShowSafeZone(!showSafeZone)}
                     layoutMode={studioLayout}
                     onLayoutModeChange={setStudioLayout}
+                    reviewComments={reviewComments}
+                    activeCommentId={activeCommentId}
+                    onSelectComment={setActiveCommentId}
+                    onAddComment={handleAddReviewComment}
+                    versionStack={versions}
+                    currentVersionId={currentVersionId}
+                    onSelectVersion={setCurrentVersionId}
+                    brandKit={brandKit}
+                    onOpenShareReview={() => setIsShareModalOpen(true)}
                   />
                 </div>
               </section>
@@ -472,6 +680,31 @@ export default function App() {
               onUpdateClip={handleUpdateClip}
             />
           </section>
+        </main>
+      )}
+
+      {/* View 0: External Reviewer Portal (外审人员批注与操作页面) */}
+      {currentView === "review_portal" && (
+        <main className="flex-1 overflow-hidden">
+          <ReviewPortal
+            currentTimeSec={currentTimeSec}
+            durationSec={durationSec}
+            isPlaying={isPlaying}
+            onPlayToggle={() => setIsPlaying(!isPlaying)}
+            onSeek={(timeSec) => setCurrentTimeSec(timeSec)}
+            tracks={tracks}
+            reviewComments={reviewComments}
+            activeCommentId={activeCommentId}
+            onSelectComment={setActiveCommentId}
+            onAddComment={handleAddReviewComment}
+            onStatusChangeComment={handleStatusChangeComment}
+            versions={versions}
+            currentVersionId={currentVersionId}
+            onSelectVersion={setCurrentVersionId}
+            brandKit={brandKit}
+            projectName="StoryFyco_访谈拆条_EP01"
+            onSwitchToStudio={() => setCurrentView("studio")}
+          />
         </main>
       )}
 
@@ -511,6 +744,16 @@ export default function App() {
         adoptionRate={81.6}
         totalAgentActionsCount={totalActionsCount}
         rolledBackCount={rolledBackCount}
+      />
+
+      {/* Frame.io / 分秒帧 协同外审分享弹窗 */}
+      <ShareReviewModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        projectName="StoryFyco_访谈拆条_EP01"
+        currentVersion={versions.find((v) => v.id === currentVersionId)?.version || "v1.3"}
+        brandKit={brandKit}
+        onOpenPortal={() => setCurrentView("review_portal")}
       />
     </div>
   );

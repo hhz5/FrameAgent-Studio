@@ -2,7 +2,7 @@
  * Domain types for FrameAgent Studio
  */
 
-export type AppViewMode = "studio" | "prd" | "wireframes" | "evaluation";
+export type AppViewMode = "studio" | "review_portal" | "prd" | "wireframes" | "evaluation";
 
 export type RiskLevel = "low" | "medium" | "high";
 
@@ -102,3 +102,66 @@ export interface EvalMetric {
   description: string;
   status: "healthy" | "warning" | "optimal";
 }
+
+/**
+ * 目标受众与业务角色模式 (Persona Workspaces)
+ * 深度对齐 Frame.io / 分秒帧业务场景
+ */
+export type UserPersona = "creator" | "studio" | "brand";
+
+export interface ReviewComment {
+  id: string;
+  timecodeSec: number;
+  author: {
+    name: string;
+    avatar: string;
+    role: "director" | "editor" | "client" | "brand_manager";
+  };
+  text: string;
+  markup?: {
+    type: "pen" | "arrow" | "box" | "pin";
+    color: string;
+    coords: { x: number; y: number; width?: number; height?: number };
+  };
+  status: "todo" | "in_progress" | "resolved" | "approved";
+  category: "cut" | "broll" | "audio" | "subtitle" | "color" | "brand_vi";
+  autoFixable: boolean;
+  agentActionDescription?: string;
+  createdAt: string;
+}
+
+export interface VersionStackItem {
+  id: string;
+  version: string; // "v1.0" | "v1.1" | "v2.0" | "v2.1"
+  label: string;
+  createdAt: string;
+  author: string;
+  status: "draft" | "reviewing" | "approved";
+  changesSummary: string;
+  tracksSnapshot: TimelineTrack[];
+}
+
+export interface BrandKitConfig {
+  brandName: string;
+  logoUrl?: string;
+  watermarkEnabled: boolean;
+  watermarkText: string;
+  watermarkPosition: "top-right" | "top-left" | "bottom-right" | "bottom-left" | "center";
+  watermarkOpacity: number;
+  brandColor: string;
+  fontFamily: string;
+  forbiddenWords: string[];
+  safeZoneRule: "douyin_tiktok" | "wechat_video" | "bilibili_youtube";
+}
+
+export interface ShareReviewConfig {
+  shareUrl: string;
+  title: string;
+  hasPassword: boolean;
+  password?: string;
+  allowDownload: boolean;
+  allowComments: boolean;
+  watermarkEnabled: boolean;
+  expiresAt: string;
+}
+
